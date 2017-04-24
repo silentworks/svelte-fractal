@@ -3,14 +3,14 @@
         x="{{0}}" y="{{0}}"
         style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
   {{#if w}}
-  <:Self w="{{nextLeft}}"
+  <:Self w="{{calc.nextLeft}}"
               x="{{0}}" y="{{-nextLeft}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
               heightFactor="{{heightFactor}}"
               lean="{{lean}}"
               left />
 
-  <:Self w="{{nextRight}}"
+  <:Self w="{{calc.nextRight}}"
               x="{{w - nextRight}}" y="{{-nextRight}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
               heightFactor="{{heightFactor}}"
@@ -56,31 +56,21 @@ const memoizedCalc = args => {
 export default {
   namespace: 'svg',
 
-  oncreate () {
-    this.observe('w', this.redraw);
-    this.observe('heightFactor', this.redraw);
-    this.observe('lean', this.redraw);
-    this.observe('lvl', this.redraw);
-    this.observe('maxlvl', this.redraw);
+  data() {
+    return {
+      rotate: 'rotate(0)',
+      calc: {
+        nextLeft: 0,
+        nextRight: 0
+      }
+    }
   },
 
-  helpers: {
-    interpolateViridis: interpolateViridis
-  },
-
-  methods: {
-    redraw() {
-      const { w, heightFactor, lean, left, right, lvl, maxlvl } = this.get()
-
+  computed: {
+    rotate: (left, right, A, B, w, lvl, maxlvl) => {
       if (lvl >= maxlvl || w < 1) {
         return null
       }
-
-      const { nextRight, nextLeft, A, B } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
-      })
 
       let rotate = ''
 
@@ -90,13 +80,31 @@ export default {
         rotate = `rotate(${B} ${w} ${w})`
       }
 
-      this.set({
-        rotate,
+      return rotate
+    },
+
+    calc: (w, heightFactor, lean, lvl, maxlvl) => {
+      console.log(lvl, maxlvl, w, heightFactor)
+      if (lvl >= maxlvl || w < 1) {
+        return null
+      }
+
+      const { nextRight, nextLeft } = memoizedCalc({
+        w: w,
+        heightFactor: heightFactor,
+        lean: lean
+      })
+      console.log(nextLeft, nextRight)
+
+      return {
         nextRight,
-        nextLeft,
-        A, B
-      });
+        nextLeft
+      }
     }
+  },
+
+  helpers: {
+    interpolateViridis: interpolateViridis
   }
 }
 </script>
