@@ -1,26 +1,22 @@
-<template>
-  <div id="app">
-    <div class="App">
-      <p class="App-intro">
-        <svg :width="svg.width" :height="svg.height" ref="svg">
-            <Pythagoras :w="baseW"
-                        :h="baseW"
-                        :heightFactor="heightFactor"
-                        :lean="lean"
-                        :x="svg.width / 2 - 40"
-                        :y="svg.height - baseW"
-                        :lvl="0"
-                        :maxlvl="currentMax"/>
-        </svg>
-      </p>
-  </div>
-  </div>
-</template>
+<div class="App">
+  <p class="App-intro">
+    <svg width="{{svg.width}}" height="{{svg.height}}" ref:svg>
+        <Pythagoras w="{{baseW}}"
+                    h="{{baseW}}"
+                    heightFactor="{{heightFactor}}"
+                    lean="{{lean}}"
+                    x="{{svg.width / 2 - 40}}"
+                    y="{{svg.height - baseW}}"
+                    lvl="{{0}}"
+                    maxlvl="{{currentMax}}"/>
+    </svg>
+  </p>
+</div>
 
 <script>
 import { select as d3select, mouse as d3mouse } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
-import Pythagoras from './components/Pythagoras.js'
+import Pythagoras from './Pythagoras.html'
 
 function throttleWithRAF (fn) {
   let running = false
@@ -37,8 +33,6 @@ function throttleWithRAF (fn) {
 const realMax = 11
 
 export default {
-  name: 'app',
-
   components: { Pythagoras },
 
   data () {
@@ -55,35 +49,41 @@ export default {
     }
   },
 
-  mounted () {
-    d3select(this.$refs.svg).on('mousemove', this.onMouseMove)
+  oncreate () {
+    this.container = this.refs.svg
+    d3select(this.container).on('mousemove', this.onMouseMove.bind(this))
     this.next()
   },
 
   methods: {
     next () {
-      if (this.currentMax < realMax) {
-        this.currentMax += 1
-        setTimeout(this.next, 500)
+      let currentMax = this.get('currentMax');
+      if (currentMax < realMax) {
+        currentMax += 1
+        this.set({currentMax});
+        setTimeout(this.next.bind(this), 500)
       }
     },
 
     onMouseMove () {
-      const [x, y] = d3mouse(this.$refs.svg)
+      const [x, y] = d3mouse(this.container)
       this.update(x, y)
     },
 
     update: throttleWithRAF(function (x, y) {
+      const svg = this.get('svg');
       const scaleFactor = scaleLinear()
-        .domain([this.svg.height, 0])
+        .domain([svg.height, 0])
         .range([0, 0.8])
 
       const scaleLean = scaleLinear()
-        .domain([0, this.svg.width / 2, this.svg.width])
+        .domain([0, svg.width / 2, svg.width])
         .range([0.5, 0, -0.5])
 
-      this.heightFactor = scaleFactor(y)
-      this.lean = scaleLean(x)
+      this.set({
+        heightFactor: scaleFactor(y),
+        lean: scaleLean(x)
+      })
     })
   }
 }
