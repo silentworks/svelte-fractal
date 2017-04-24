@@ -1,7 +1,7 @@
 <g transform="{{`translate(${x} ${y}) ${rotate}`}}">
   <rect width="{{w}}" height="{{w}}"
         x="{{0}}" y="{{0}}"
-        style="fill:{{`interpolateViridis(lvl/maxlvl)`}}" />
+        style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
   {{#if w}}
   <:Self w="{{nextLeft}}"
               x="{{0}}" y="{{-nextLeft}}"
@@ -55,21 +55,22 @@ const memoizedCalc = args => {
 
 export default {
   namespace: 'svg',
+
   oncreate () {
     this.observe('w', this.redraw);
-    this.observe('x', this.redraw);
-    this.observe('y', this.redraw);
     this.observe('heightFactor', this.redraw);
     this.observe('lean', this.redraw);
     this.observe('lvl', this.redraw);
     this.observe('maxlvl', this.redraw);
   },
 
-  methods: {
-    interpolateViridis: interpolateViridis,
+  helpers: {
+    interpolateViridis: interpolateViridis
+  },
 
+  methods: {
     redraw() {
-      const { w, x, y, heightFactor, lean, left, right, lvl, maxlvl } = this.get()
+      const { w, heightFactor, lean, left, right, lvl, maxlvl } = this.get()
 
       if (lvl >= maxlvl || w < 1) {
         return null
