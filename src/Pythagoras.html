@@ -3,14 +3,14 @@
         x="{{0}}" y="{{0}}"
         style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
   {{#if w}}
-  <:Self w="{{calc.nextLeft}}"
+  <:Self w="{{nextLeft}}"
               x="{{0}}" y="{{-nextLeft}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
               heightFactor="{{heightFactor}}"
               lean="{{lean}}"
               left />
 
-  <:Self w="{{calc.nextRight}}"
+  <:Self w="{{nextRight}}"
               x="{{w - nextRight}}" y="{{-nextRight}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
               heightFactor="{{heightFactor}}"
@@ -58,21 +58,21 @@ export default {
 
   data() {
     return {
-      rotate: 'rotate(0)',
-      calc: {
-        nextLeft: 0,
-        nextRight: 0
-      }
+      A: 0,
+      B: 0,
+      heightFactor: 0,
+      lean: 0,
+      left: 0,
+      lvl: 0,
+      maxlvl: 0,
+      right: 0,
+      w: 0
     }
   },
 
   computed: {
     rotate: (left, right, A, B, w, lvl, maxlvl) => {
-      if (lvl >= maxlvl || w < 1) {
-        return null
-      }
-
-      let rotate = ''
+      let rotate = 'rotate(0)'
 
       if (left) {
         rotate = `rotate(${-A} 0 ${w})`
@@ -83,23 +83,42 @@ export default {
       return rotate
     },
 
-    calc: (w, heightFactor, lean, lvl, maxlvl) => {
-      console.log(lvl, maxlvl, w, heightFactor)
-      if (lvl >= maxlvl || w < 1) {
-        return null
-      }
-
-      const { nextRight, nextLeft } = memoizedCalc({
+    nextLeft: (w, heightFactor, lean) => {
+      const { nextLeft } = memoizedCalc({
         w: w,
         heightFactor: heightFactor,
         lean: lean
       })
-      console.log(nextLeft, nextRight)
+      return nextLeft
+    },
 
-      return {
-        nextRight,
-        nextLeft
-      }
+    nextRight: (w, heightFactor, lean) => {
+      const { nextRight } = memoizedCalc({
+        w: w,
+        heightFactor: heightFactor,
+        lean: lean
+      })
+      return nextRight
+    },
+
+    A: (w, heightFactor, lean) => {
+      const { A } = memoizedCalc({
+        w: w,
+        heightFactor: heightFactor,
+        lean: lean
+      })
+
+      return A
+    },
+
+    B: (w, heightFactor, lean) => {
+      const { B } = memoizedCalc({
+        w: w,
+        heightFactor: heightFactor,
+        lean: lean
+      })
+
+      return B
     }
   },
 
