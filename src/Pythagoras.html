@@ -2,7 +2,7 @@
   <rect width="{{w}}" height="{{w}}"
         x="{{0}}" y="{{0}}"
         style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
-  {{#if w}}
+  {{#if w >= 1}}
   <:Self w="{{nextLeft}}"
               x="{{0}}" y="{{-nextLeft}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
@@ -26,40 +26,11 @@ Math.deg = radians => {
   return radians * (180 / Math.PI)
 }
 
-const memo = {}
-
-const key = ({ w, heightFactor, lean }) => {
-  return [w, heightFactor, lean].join('-')
-}
-
-const memoizedCalc = args => {
-  const memoKey = key(args)
-
-  if (memo[memoKey]) {
-    return memo[memoKey]
-  } else {
-    const { w, heightFactor, lean } = args
-    const trigH = heightFactor * w
-
-    const result = {
-      nextRight: Math.sqrt(trigH ** 2 + (w * (0.5 + lean)) ** 2),
-      nextLeft: Math.sqrt(trigH ** 2 + (w * (0.5 - lean)) ** 2),
-      A: Math.deg(Math.atan(trigH / ((0.5 - lean) * w))),
-      B: Math.deg(Math.atan(trigH / ((0.5 + lean) * w)))
-    }
-
-    memo[memoKey] = result
-    return result
-  }
-}
-
 export default {
   namespace: 'svg',
 
   data() {
     return {
-      A: 0,
-      B: 0,
       heightFactor: 0,
       lean: 0,
       left: 0,
@@ -71,55 +42,26 @@ export default {
   },
 
   computed: {
-    rotate: (left, right, A, B, w, lvl, maxlvl) => {
-      let rotate = 'rotate(0)'
 
+    trigH: (heightFactor, w) => heightFactor * w,
+
+    rotate: (left, right, A, B, w) => {
       if (left) {
-        rotate = `rotate(${-A} 0 ${w})`
+        return `rotate(${-A} 0 ${w})`
       } else if (right) {
-        rotate = `rotate(${B} ${w} ${w})`
+        return `rotate(${B} ${w} ${w})`
+      } else {
+        return 'rotate(0)'
       }
-
-      return rotate
     },
 
-    nextLeft: (w, heightFactor, lean) => {
-      const { nextLeft } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
-      })
-      return nextLeft
-    },
+    nextLeft: (w, trigH, lean) => Math.sqrt(trigH ** 2 + (w * (0.5 - lean)) ** 2),
 
-    nextRight: (w, heightFactor, lean) => {
-      const { nextRight } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
-      })
-      return nextRight
-    },
+    nextRight: (w, trigH, lean) => Math.sqrt(trigH ** 2 + (w * (0.5 + lean)) ** 2),
 
-    A: (w, heightFactor, lean) => {
-      const { A } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
-      })
+    A: (w, trigH, lean) => Math.deg(Math.atan(trigH / ((0.5 - lean) * w))),
 
-      return A
-    },
-
-    B: (w, heightFactor, lean) => {
-      const { B } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
-      })
-
-      return B
-    }
+    B: (w, trigH, lean) => Math.deg(Math.atan(trigH / ((0.5 + lean) * w))),
   },
 
   helpers: {
