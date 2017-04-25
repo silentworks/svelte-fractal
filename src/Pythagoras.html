@@ -2,7 +2,8 @@
   <rect width="{{w}}" height="{{w}}"
         x="{{0}}" y="{{0}}"
         style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
-  {{#if w}}
+
+  {{#if w >= 1}}
   <:Self w="{{nextLeft}}"
               x="{{0}}" y="{{-nextLeft}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
@@ -58,8 +59,6 @@ export default {
 
   data() {
     return {
-      A: 0,
-      B: 0,
       heightFactor: 0,
       lean: 0,
       left: 0,
@@ -71,7 +70,7 @@ export default {
   },
 
   computed: {
-    rotate: (left, right, A, B, w, lvl, maxlvl) => {
+    rotate: (left, right, A, B, w) => {
       let rotate = 'rotate(0)'
 
       if (left) {
@@ -85,39 +84,37 @@ export default {
 
     nextLeft: (w, heightFactor, lean) => {
       const { nextLeft } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
+        w,
+        heightFactor,
+        lean
       })
       return nextLeft
     },
 
     nextRight: (w, heightFactor, lean) => {
       const { nextRight } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
+        w,
+        heightFactor,
+        lean
       })
       return nextRight
     },
 
     A: (w, heightFactor, lean) => {
       const { A } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
+        w,
+        heightFactor,
+        lean
       })
-
       return A
     },
 
     B: (w, heightFactor, lean) => {
       const { B } = memoizedCalc({
-        w: w,
-        heightFactor: heightFactor,
-        lean: lean
+        w,
+        heightFactor,
+        lean
       })
-
       return B
     }
   },
