@@ -1,23 +1,19 @@
-<div class="App">
-  <div className="App-header">
-      <h2>This is a dancing Pythagoras tree</h2>
-  </div>
-  <p class="App-intro">
-    <svg width="{{svg.width}}" height="{{svg.height}}" ref:svg>
-        <Pythagoras w="{{baseW}}"
-                    h="{{baseW}}"
-                    heightFactor="{{heightFactor}}"
-                    lean="{{lean}}"
-                    x="{{svg.width / 2 - 40}}"
-                    y="{{svg.height - baseW}}"
-                    lvl="{{0}}"
-                    maxlvl="{{currentMax}}"/>
-    </svg>
-  </p>
-</div>
+<:Window bind:innerWidth bind:innerHeight/>
+
+<svg width="{{innerWidth}}" height="{{innerHeight}}" ref:svg on:mousemove='onMouseMove(event)'>
+  <Pythagoras
+    w="{{baseW}}"
+    h="{{baseW}}"
+    heightFactor="{{heightFactor}}"
+    lean="{{lean}}"
+    x="{{(innerWidth - baseW) / 2}}"
+    y="{{innerHeight - baseW}}"
+    lvl="{{0}}"
+    maxlvl="{{currentMax}}"
+  />
+</svg>
 
 <script>
-import { select as d3select, mouse as d3mouse } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
 import Pythagoras from './Pythagoras.html'
 
@@ -33,87 +29,63 @@ function throttleWithRAF (fn) {
   }
 }
 
-const realMax = 11
+const realMax = 11;
 
 export default {
   components: { Pythagoras },
 
   data () {
     return {
-      svg: {
-        width: 1280,
-        height: 600
-      },
-
       currentMax: 0,
       baseW: 80,
       heightFactor: 0,
       lean: 0
-    }
+    };
   },
 
   oncreate () {
-    this.container = this.refs.svg
-    d3select(this.container).on('mousemove', this.onMouseMove.bind(this))
-    this.next()
-  },
-
-  methods: {
-    next () {
+    const next = () => {
       let currentMax = this.get('currentMax');
       if (currentMax < realMax) {
         currentMax += 1
         this.set({currentMax});
-        setTimeout(this.next.bind(this), 500)
+        setTimeout(next, 100)
       }
-    },
+    };
 
-    onMouseMove () {
-      const [x, y] = d3mouse(this.container)
-      this.update(x, y)
+    next();
+  },
+
+  methods: {
+    onMouseMove (event) {
+      const { left, top } = this.refs.svg.getBoundingClientRect();
+      const x = event.clientX - left;
+      const y = event.clientY - top;
+      this.update(x, y);
     },
 
     update: throttleWithRAF(function (x, y) {
-      const svg = this.get('svg');
+      const { innerWidth, innerHeight } = this.get();
       const scaleFactor = scaleLinear()
-        .domain([svg.height, 0])
+        .domain([innerHeight, 0])
         .range([0, 0.8])
 
       const scaleLean = scaleLinear()
-        .domain([0, svg.width / 2, svg.width])
+        .domain([0, innerWidth / 2, innerWidth])
         .range([0.5, 0, -0.5])
 
       this.set({
         heightFactor: scaleFactor(y),
         lean: scaleLean(x)
-      })
+      });
     })
   }
 }
 </script>
 
 <style>
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 80px;
-}
-
-.App-header {
-  background-color: #222;
-  height: 150px;
-  padding: 20px;
-  color: white;
-}
-
-.App-intro {
-  font-size: large;
-}
-
-@keyframes App-logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+  :global(body) {
+    margin: 0;
+    overflow: hidden;
+  }
 </style>

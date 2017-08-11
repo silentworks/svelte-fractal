@@ -16,7 +16,7 @@ npm install
 ### Running
 
 ```bash
-npm run dev
+npm run dev && npm start
 ```
 
 ### Building
