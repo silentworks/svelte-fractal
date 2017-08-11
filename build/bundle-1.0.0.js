@@ -1292,7 +1292,6 @@ var formatTypes = {
   "x": function(x) { return Math.round(x).toString(16); }
 };
 
-// [[fill]align][sign][symbol][0][width][,][.precision][type]
 var re = /^(?:(.)?([<>=^]))?([+\-\( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?([a-z%])?$/i;
 
 function formatSpecifier(specifier) {
@@ -2806,10 +2805,10 @@ function create_if_block ( state, component ) {
 		_root: component._root,
 		data: {
 			left: true,
+			x: 0,
 			maxlvl: state.maxlvl,
 			heightFactor: state.heightFactor,
 			lean: state.lean,
-			x: 0,
 			y: -state.nextLeft,
 			w: state.nextLeft,
 			lvl: state.lvl + 1
@@ -2847,7 +2846,6 @@ function create_if_block ( state, component ) {
 			if ( 'maxlvl' in changed ) { pythagoras_changes.maxlvl = state.maxlvl; }
 			if ( 'heightFactor' in changed ) { pythagoras_changes.heightFactor = state.heightFactor; }
 			if ( 'lean' in changed ) { pythagoras_changes.lean = state.lean; }
-			pythagoras_changes.x = 0;
 			if ( 'nextLeft' in changed ) { pythagoras_changes.y = -state.nextLeft; }
 			if ( 'nextLeft' in changed ) { pythagoras_changes.w = state.nextLeft; }
 			if ( 'lvl' in changed ) { pythagoras_changes.lvl = state.lvl + 1; }
@@ -3019,13 +3017,13 @@ function create_main_fragment ( state, component ) {
 	var pythagoras = new Pythagoras({
 		_root: component._root,
 		data: {
+			lvl: 0,
 			w: state.baseW,
 			h: state.baseW,
 			heightFactor: state.heightFactor,
 			lean: state.lean,
 			x: (state.innerWidth - state.baseW) / 2,
 			y: state.innerHeight - state.baseW,
-			lvl: 0,
 			maxlvl: state.currentMax
 		}
 	});
@@ -3068,7 +3066,6 @@ function create_main_fragment ( state, component ) {
 			if ( 'lean' in changed ) { pythagoras_changes.lean = state.lean; }
 			if ( 'innerWidth' in changed||'baseW' in changed ) { pythagoras_changes.x = (state.innerWidth - state.baseW) / 2; }
 			if ( 'innerHeight' in changed||'baseW' in changed ) { pythagoras_changes.y = state.innerHeight - state.baseW; }
-			pythagoras_changes.lvl = 0;
 			if ( 'currentMax' in changed ) { pythagoras_changes.maxlvl = state.currentMax; }
 
 			if ( Object.keys( pythagoras_changes ).length ) { pythagoras._set( pythagoras_changes ); }
@@ -3142,7 +3139,6 @@ App.prototype._set = function _set ( newState ) {
 	dispatchObservers( this, this._observers.post, newState, oldState );
 };
 
-/* eslint-disable no-new */
 var app = new App({
   target: document.getElementById('app')
 });

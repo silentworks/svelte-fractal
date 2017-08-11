@@ -2,10 +2,29 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>svelte-fractal</title>
+    <title>Svelte Fractal</title>
+    <style>
+      header {
+        background-color: #f3f3f3;
+        border-bottom: 2px solid #E6ECF0;
+        color: #333;
+        font-family: Arial, serif;
+        text-align: center;
+        padding: 10px 0 0;
+      }
+      .logo {
+        border: 4px solid #fff;
+        border-radius: 50%;
+        width: 60px;
+      }
+    </style>
     <link rel="stylesheet" href="build/main-1.0.0.css">
   </head>
   <body>
+    <header>
+      <img src="/static/svelte-logo.jpg" class="logo" alt="Svelte Fractal" />
+      <p>This is a dancing Pythagoras tree <br /> <a href="https://github.com/silentworks/svelte-fractal">Github Repo</a></p>
+    </header>
     <div id="app"></div>
     <script src="build/bundle-1.0.0.js"></script>
   </body>
