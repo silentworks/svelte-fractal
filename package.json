@@ -13,7 +13,7 @@
     "d3-selection": "^1.0.3",
     "rollup": "^0.37.0",
     "rollup-plugin-buble": "^0.15.0",
-    "rollup-plugin-svelte": "^1.2.0",
+    "rollup-plugin-svelte": "^3.0.0",
     "rollup-watch": "^2.5.0"
   },
   "dependencies": {

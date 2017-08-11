@@ -52,7 +52,7 @@ export default {
       ],*/
 
       css: function ( css ) {
-        fs.writeFileSync( 'build/main-' + pkg.version + '.css', css );
+        css.write( 'build/main-' + pkg.version + '.css', css );
       }
     }),
     buble(),
