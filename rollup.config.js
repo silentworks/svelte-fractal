@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import serve from 'rollup-plugin-serve';
 import svelte from 'rollup-plugin-svelte';
 import buble from 'rollup-plugin-buble';
 import resolve from 'rollup-plugin-node-resolve';
@@ -51,21 +50,22 @@ export default {
         'src/components/**.html'
       ],*/
 
+      cascade: false,
       css: function ( css ) {
-        fs.writeFileSync( 'build/main-' + pkg.version + '.css', css );
+        css.write( 'build/main-' + pkg.version + '.css' );
       }
     }),
     buble(),
-    serve({
-      // Folder to serve files from,
-      contentBase: '',
+    // serve({
+    //   // Folder to serve files from,
+    //   contentBase: '',
 
-      // Set to true to return index.html instead of 404
-      historyApiFallback: true,
+    //   // Set to true to return index.html instead of 404
+    //   historyApiFallback: true,
 
-      // Options used in setting up server
-      host: 'localhost',
-      port: 3200
-    })
+    //   // Options used in setting up server
+    //   host: 'localhost',
+    //   port: 3200
+    // })
   ]
 }

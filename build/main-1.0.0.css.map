@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "main-1.0.0.css",
+  "sources": [
+    "../src/App.html"
+  ],
+  "sourcesContent": [
+    "<div class=\"App\">\n  <p class=\"App-intro\">\n    <svg width=\"{{svg.width}}\" height=\"{{svg.height}}\" ref:svg on:mousemove='onMouseMove(event)'>\n        <Pythagoras w=\"{{baseW}}\"\n                    h=\"{{baseW}}\"\n                    heightFactor=\"{{heightFactor}}\"\n                    lean=\"{{lean}}\"\n                    x=\"{{svg.width / 2 - 40}}\"\n                    y=\"{{svg.height - baseW}}\"\n                    lvl=\"{{0}}\"\n                    maxlvl=\"{{currentMax}}\"/>\n    </svg>\n  </p>\n</div>\n\n<script>\nimport { scaleLinear } from 'd3-scale'\nimport Pythagoras from './Pythagoras.html'\n\nfunction throttleWithRAF (fn) {\n  let running = false\n  return function () {\n    if (running) return\n    running = true\n    window.requestAnimationFrame(() => {\n      fn.apply(this, arguments)\n      running = false\n    })\n  }\n}\n\nconst realMax = 11\n\nexport default {\n  components: { Pythagoras },\n\n  data () {\n    return {\n      svg: {\n        width: 1280,\n        height: 600\n      },\n\n      currentMax: 0,\n      baseW: 80,\n      heightFactor: 0,\n      lean: 0\n    }\n  },\n\n  oncreate () {\n    this.container = this.refs.svg\n    this.next()\n  },\n\n  methods: {\n    next () {\n      let currentMax = this.get('currentMax');\n      if (currentMax < realMax) {\n        currentMax += 1\n        this.set({currentMax});\n        setTimeout(this.next.bind(this), 100)\n      }\n    },\n\n    onMouseMove (event) {\n      const { left, top } = this.refs.svg.getBoundingClientRect();\n      const x = event.clientX - left;\n      const y = event.clientY - top;\n      this.update(x, y)\n    },\n\n    update: throttleWithRAF(function (x, y) {\n      const svg = this.get('svg');\n      const scaleFactor = scaleLinear()\n        .domain([svg.height, 0])\n        .range([0, 0.8])\n\n      const scaleLean = scaleLinear()\n        .domain([0, svg.width / 2, svg.width])\n        .range([0.5, 0, -0.5])\n\n      this.set({\n        heightFactor: scaleFactor(y),\n        lean: scaleLean(x)\n      })\n    })\n  }\n}\n</script>\n\n<style>\n.App {\n  text-align: center;\n}\n\n.App-intro {\n  font-size: large;\n}\n</style>\n"
+  ],
+  "names": [],
+  "mappings": "AA2FO;AACP,uBAAI,CAAC;EACH,WAAW,CAAC,MAAM;CACnB;;AAED,6BAAU,CAAC;EACT,UAAU,CAAC,KAAK;CACjB;AACD"
+}

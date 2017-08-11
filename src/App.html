@@ -1,6 +1,6 @@
 <div class="App">
   <p class="App-intro">
-    <svg width="{{svg.width}}" height="{{svg.height}}" ref:svg>
+    <svg width="{{svg.width}}" height="{{svg.height}}" ref:svg on:mousemove='onMouseMove(event)'>
         <Pythagoras w="{{baseW}}"
                     h="{{baseW}}"
                     heightFactor="{{heightFactor}}"
@@ -14,7 +14,6 @@
 </div>
 
 <script>
-import { select as d3select, mouse as d3mouse } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
 import Pythagoras from './Pythagoras.html'
 
@@ -51,7 +50,6 @@ export default {
 
   oncreate () {
     this.container = this.refs.svg
-    d3select(this.container).on('mousemove', this.onMouseMove.bind(this))
     this.next()
   },
 
@@ -61,12 +59,14 @@ export default {
       if (currentMax < realMax) {
         currentMax += 1
         this.set({currentMax});
-        setTimeout(this.next.bind(this), 500)
+        setTimeout(this.next.bind(this), 100)
       }
     },
 
-    onMouseMove () {
-      const [x, y] = d3mouse(this.container)
+    onMouseMove (event) {
+      const { left, top } = this.refs.svg.getBoundingClientRect();
+      const x = event.clientX - left;
+      const y = event.clientY - top;
       this.update(x, y)
     },
 
@@ -94,24 +94,7 @@ export default {
   text-align: center;
 }
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 80px;
-}
-
-.App-header {
-  background-color: #222;
-  height: 150px;
-  padding: 20px;
-  color: white;
-}
-
 .App-intro {
   font-size: large;
-}
-
-@keyframes App-logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 </style>

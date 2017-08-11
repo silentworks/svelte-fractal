@@ -1,57 +1,29 @@
-<g transform="{{`translate(${x} ${y}) ${rotate}`}}">
-  <rect width="{{w}}" height="{{w}}"
-        x="{{0}}" y="{{0}}"
-        style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
+<g transform="translate({{x}} {{y}}) {{rotate}}">
+  <rect width="{{w}}" height="{{w}}" style="fill:{{fill}}"/>
+  {{#if 1 < w && lvl < maxlvl}}
+    <:Self
+      :maxlvl :heightFactor :lean left
+      x="{{0}}"
+      y="{{-nextLeft}}"
+      w="{{nextLeft}}"
+      lvl="{{lvl + 1}}"
+    />
 
-  {{#if w >= 1}}
-  <:Self w="{{nextLeft}}"
-              x="{{0}}" y="{{-nextLeft}}"
-              lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
-              heightFactor="{{heightFactor}}"
-              lean="{{lean}}"
-              left />
-
-  <:Self w="{{nextRight}}"
-              x="{{w - nextRight}}" y="{{-nextRight}}"
-              lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
-              heightFactor="{{heightFactor}}"
-              lean="{{lean}}"
-              right />
+    <:Self
+      :maxlvl :heightFactor :lean right
+      x="{{w - nextRight}}"
+      y="{{-nextRight}}"
+      w="{{nextRight}}"
+      lvl="{{lvl + 1}}"
+    />
   {{/if}}
 </g>
 
 <script>
 import { interpolateViridis } from 'd3-scale'
 
-Math.deg = radians => {
+function deg (radians) {
   return radians * (180 / Math.PI)
-}
-
-const memo = {}
-
-const key = ({ w, heightFactor, lean }) => {
-  return [w, heightFactor, lean].join('-')
-}
-
-const memoizedCalc = args => {
-  const memoKey = key(args)
-
-  if (memo[memoKey]) {
-    return memo[memoKey]
-  } else {
-    const { w, heightFactor, lean } = args
-    const trigH = heightFactor * w
-
-    const result = {
-      nextRight: Math.sqrt(trigH ** 2 + (w * (0.5 + lean)) ** 2),
-      nextLeft: Math.sqrt(trigH ** 2 + (w * (0.5 - lean)) ** 2),
-      A: Math.deg(Math.atan(trigH / ((0.5 - lean) * w))),
-      B: Math.deg(Math.atan(trigH / ((0.5 + lean) * w)))
-    }
-
-    memo[memoKey] = result
-    return result
-  }
 }
 
 export default {
@@ -70,53 +42,22 @@ export default {
   },
 
   computed: {
+    trigH: (heightFactor, w) => heightFactor * w,
     rotate: (left, right, A, B, w) => {
-      let rotate = 'rotate(0)'
-
       if (left) {
-        rotate = `rotate(${-A} 0 ${w})`
+        return `rotate(${-A} 0 ${w})`
       } else if (right) {
-        rotate = `rotate(${B} ${w} ${w})`
+        return `rotate(${B} ${w} ${w})`
+      } else {
+        return 'rotate(0)'
       }
-
-      return rotate
     },
 
-    nextLeft: (w, heightFactor, lean) => {
-      const { nextLeft } = memoizedCalc({
-        w,
-        heightFactor,
-        lean
-      })
-      return nextLeft
-    },
-
-    nextRight: (w, heightFactor, lean) => {
-      const { nextRight } = memoizedCalc({
-        w,
-        heightFactor,
-        lean
-      })
-      return nextRight
-    },
-
-    A: (w, heightFactor, lean) => {
-      const { A } = memoizedCalc({
-        w,
-        heightFactor,
-        lean
-      })
-      return A
-    },
-
-    B: (w, heightFactor, lean) => {
-      const { B } = memoizedCalc({
-        w,
-        heightFactor,
-        lean
-      })
-      return B
-    }
+    nextLeft: (w, trigH, lean) => Math.sqrt(trigH ** 2 + (w * (0.5 - lean)) ** 2),
+    nextRight: (w, trigH, lean) => Math.sqrt(trigH ** 2 + (w * (0.5 + lean)) ** 2),
+    A: (w, trigH, lean) => deg(Math.atan(trigH / ((0.5 - lean) * w))),
+    B: (w, trigH, lean) => deg(Math.atan(trigH / ((0.5 + lean) * w))),
+    fill: (lvl, maxlvl) => interpolateViridis(lvl / maxlvl)
   },
 
   helpers: {
