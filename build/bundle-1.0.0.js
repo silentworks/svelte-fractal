@@ -2528,12 +2528,12 @@ function detachNode(node) {
 	node.parentNode.removeChild(node);
 }
 
-function createElement(name) {
-	return document.createElement(name);
-}
-
 function createSvgElement(name) {
 	return document.createElementNS('http://www.w3.org/2000/svg', name);
+}
+
+function createText(data) {
+	return document.createTextNode(data);
 }
 
 function addListener(node, event, handler) {
@@ -2669,7 +2669,7 @@ function recompute ( state, newState, oldState, isInitial ) {
 
 var template$1 = (function () {
 function deg (radians) {
-  return radians * (180 / Math.PI)
+  return radians * (180 / Math.PI);
 }
 
 return {
@@ -2930,33 +2930,29 @@ var realMax = 11;
 return {
   data: function data () {
     return {
-      svg: {
-        width: 1280,
-        height: 600
-      },
-
       currentMax: 0,
       baseW: 80,
       heightFactor: 0,
       lean: 0
-    }
+    };
   },
 
   oncreate: function oncreate () {
-    this.container = this.refs.svg;
-    this.next();
+    var this$1 = this;
+
+    var next = function () {
+      var currentMax = this$1.get('currentMax');
+      if (currentMax < realMax) {
+        currentMax += 1;
+        this$1.set({currentMax: currentMax});
+        setTimeout(next, 100);
+      }
+    };
+
+    next();
   },
 
   methods: {
-    next: function next () {
-      var currentMax = this.get('currentMax');
-      if (currentMax < realMax) {
-        currentMax += 1;
-        this.set({currentMax: currentMax});
-        setTimeout(this.next.bind(this), 100);
-      }
-    },
-
     onMouseMove: function onMouseMove (event) {
       var ref = this.refs.svg.getBoundingClientRect();
       var left = ref.left;
@@ -2967,13 +2963,15 @@ return {
     },
 
     update: throttleWithRAF(function (x, y) {
-      var svg = this.get('svg');
+      var ref = this.get();
+      var innerWidth = ref.innerWidth;
+      var innerHeight = ref.innerHeight;
       var scaleFactor = linear()
-        .domain([svg.height, 0])
+        .domain([innerHeight, 0])
         .range([0, 0.8]);
 
       var scaleLean = linear()
-        .domain([0, svg.width / 2, svg.width])
+        .domain([0, innerWidth / 2, innerWidth])
         .range([0.5, 0, -0.5]);
 
       this.set({
@@ -2986,7 +2984,15 @@ return {
 }());
 
 function create_main_fragment ( state, component ) {
-	var div, p, svg, svg_width_value, svg_height_value;
+	var text, svg, svg_width_value, svg_height_value;
+
+	function onwindowresize ( event ) {
+		component.set({
+			innerWidth: this.innerWidth,
+			innerHeight: this.innerHeight
+		});
+	}
+	window.addEventListener( 'resize', onwindowresize );
 
 	function mousemove_handler ( event ) {
 		component.onMouseMove(event);
@@ -2999,8 +3005,8 @@ function create_main_fragment ( state, component ) {
 			h: state.baseW,
 			heightFactor: state.heightFactor,
 			lean: state.lean,
-			x: state.svg.width / 2 - 40,
-			y: state.svg.height - state.baseW,
+			x: (state.innerWidth - state.baseW) / 2,
+			y: state.innerHeight - state.baseW,
 			lvl: 0,
 			maxlvl: state.currentMax
 		}
@@ -3008,37 +3014,31 @@ function create_main_fragment ( state, component ) {
 
 	return {
 		create: function () {
-			div = createElement( 'div' );
-			p = createElement( 'p' );
+			text = createText( "\n\n" );
 			svg = createSvgElement( 'svg' );
 			pythagoras._fragment.create();
 			this.hydrate();
 		},
 
 		hydrate: function ( nodes ) {
-			setAttribute( div, 'svelte-2334490188', '' );
-			div.className = "App";
-			setAttribute( p, 'svelte-2334490188', '' );
-			p.className = "App-intro";
-			setAttribute( svg, 'width', svg_width_value = state.svg.width );
-			setAttribute( svg, 'height', svg_height_value = state.svg.height );
+			setAttribute( svg, 'width', svg_width_value = state.innerWidth );
+			setAttribute( svg, 'height', svg_height_value = state.innerHeight );
 			addListener( svg, 'mousemove', mousemove_handler );
 		},
 
 		mount: function ( target, anchor ) {
-			insertNode( div, target, anchor );
-			appendNode( p, div );
-			appendNode( svg, p );
+			insertNode( text, target, anchor );
+			insertNode( svg, target, anchor );
 			component.refs.svg = svg;
 			pythagoras._fragment.mount( svg, null );
 		},
 
 		update: function ( changed, state ) {
-			if ( svg_width_value !== ( svg_width_value = state.svg.width ) ) {
+			if ( svg_width_value !== ( svg_width_value = state.innerWidth ) ) {
 				setAttribute( svg, 'width', svg_width_value );
 			}
 
-			if ( svg_height_value !== ( svg_height_value = state.svg.height ) ) {
+			if ( svg_height_value !== ( svg_height_value = state.innerHeight ) ) {
 				setAttribute( svg, 'height', svg_height_value );
 			}
 
@@ -3048,8 +3048,8 @@ function create_main_fragment ( state, component ) {
 			if ( 'baseW' in changed ) { pythagoras_changes.h = state.baseW; }
 			if ( 'heightFactor' in changed ) { pythagoras_changes.heightFactor = state.heightFactor; }
 			if ( 'lean' in changed ) { pythagoras_changes.lean = state.lean; }
-			if ( 'svg' in changed ) { pythagoras_changes.x = state.svg.width / 2 - 40; }
-			if ( 'svg' in changed||'baseW' in changed ) { pythagoras_changes.y = state.svg.height - state.baseW; }
+			if ( 'innerWidth' in changed||'baseW' in changed ) { pythagoras_changes.x = (state.innerWidth - state.baseW) / 2; }
+			if ( 'innerHeight' in changed||'baseW' in changed ) { pythagoras_changes.y = state.innerHeight - state.baseW; }
 			pythagoras_changes.lvl = 0;
 			if ( 'currentMax' in changed ) { pythagoras_changes.maxlvl = state.currentMax; }
 
@@ -3057,11 +3057,14 @@ function create_main_fragment ( state, component ) {
 		},
 
 		unmount: function () {
-			detachNode( div );
+			detachNode( text );
+			detachNode( svg );
 			if ( component.refs.svg === svg ) { component.refs.svg = null; }
 		},
 
 		destroy: function () {
+			window.removeEventListener( 'resize', onwindowresize );
+
 			removeListener( svg, 'mousemove', mousemove_handler );
 			pythagoras.destroy( false );
 		}
@@ -3072,6 +3075,8 @@ function App ( options ) {
 	options = options || {};
 	this.refs = {};
 	this._state = assign( template.data(), options.data );
+	this._state.innerWidth = window.innerWidth;
+	this._state.innerHeight = window.innerHeight;
 
 	this._observers = {
 		pre: Object.create( null ),
