@@ -3,7 +3,7 @@
         x="{{0}}" y="{{0}}"
         style="fill:{{interpolateViridis(lvl/maxlvl)}}" />
 
-  {{#if w >= 1}}
+  {{#if lvl < maxlvl}}
   <:Self w="{{nextLeft}}"
               x="{{0}}" y="{{-nextLeft}}"
               lvl="{{lvl + 1}}" maxlvl="{{maxlvl}}"
