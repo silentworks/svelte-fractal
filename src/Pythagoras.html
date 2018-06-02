@@ -1,20 +1,20 @@
 <g transform="translate({x} {y}) {rotate}">
   <rect width="{w}" height="{w}" style="fill:{fill}"/>
-  {#if 1 < w && lvl < maxlvl}
+  {#if check}
     <svelte:self
       {maxlvl} {heightFactor} {lean} left
-      x="0"
-      y="{-nextLeft}"
-      w="{nextLeft}"
-      lvl="{lvl + 1}"
+      x={0}
+      y={-nextLeft}
+      w={nextLeft}
+      lvl={lvl + 1}
     />
 
     <svelte:self
       {maxlvl} {heightFactor} {lean} right
-      x="{w - nextRight}"
-      y="{-nextRight}"
-      w="{nextRight}"
-      lvl="{lvl + 1}"
+      x={w - nextRight}
+      y={-nextRight}
+      w={nextRight}
+      lvl={lvl + 1}
     />
   {/if}
 </g>
@@ -57,11 +57,8 @@ export default {
     nextRight: ({ w, trigH, lean }) => Math.sqrt(trigH ** 2 + (w * (0.5 + lean)) ** 2),
     A: ({ w, trigH, lean }) => deg(Math.atan(trigH / ((0.5 - lean) * w))),
     B: ({ w, trigH, lean }) => deg(Math.atan(trigH / ((0.5 + lean) * w))),
-    fill: ({ lvl, maxlvl }) => interpolateViridis(lvl / maxlvl)
-  },
-
-  helpers: {
-    interpolateViridis: interpolateViridis
+    fill: ({ lvl, maxlvl }) => interpolateViridis(lvl / maxlvl),
+    check: ({ w, lvl, maxlvl }) => 1 < w && lvl < maxlvl,
   }
 }
 </script>

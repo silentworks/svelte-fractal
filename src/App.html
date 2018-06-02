@@ -1,86 +1,87 @@
 <svelte:window bind:innerWidth bind:innerHeight/>
 
-<svg width="{innerWidth}" height="{innerHeight}" ref:svg on:mousemove='onMouseMove(event)'>
+<svg width={innerWidth} height={innerHeight} ref:svg on:mousemove='onMouseMove(event)'>
   <Pythagoras
-    w="{baseW}"
-    h="{baseW}"
+    w={baseW}
+    h={baseW}
     {heightFactor}
     {lean}
-    x="{(innerWidth - baseW) / 2}"
-    y="{innerHeight - baseW}"
-    lvl="0"
-    maxlvl="{currentMax}"
+    x={(innerWidth - baseW) / 2}
+    y={innerHeight - baseW}
+    lvl={0}
+    maxlvl={currentMax}
   />
 </svg>
 
 <script>
-import { scaleLinear } from 'd3-scale'
-import Pythagoras from './Pythagoras.html'
+  import { scaleLinear } from 'd3-scale'
+  import Pythagoras from './Pythagoras.html'
 
-function throttleWithRAF (fn) {
-  let running = false
-  return function () {
-    if (running) return
-    running = true
-    window.requestAnimationFrame(() => {
-      fn.apply(this, arguments)
-      running = false
-    })
+  function throttleWithRAF (fn) {
+    let running = false
+    return function () {
+      if (running) return
+      running = true
+      window.requestAnimationFrame(() => {
+        fn.apply(this, arguments)
+        running = false
+      })
+    }
   }
-}
 
-const realMax = 11;
+  const realMax = 11;
 
-export default {
-  components: { Pythagoras },
+  export default {
+    components: { Pythagoras },
 
-  data () {
-    return {
-      currentMax: 0,
-      baseW: 80,
-      heightFactor: 0,
-      lean: 0
-    };
-  },
-
-  oncreate () {
-    const next = () => {
-      let currentMax = this.get('currentMax');
-      if (currentMax < realMax) {
-        currentMax += 1
-        this.set({currentMax});
-        setTimeout(next, 100)
-      }
-    };
-
-    next();
-  },
-
-  methods: {
-    onMouseMove (event) {
-      const { left, top } = this.refs.svg.getBoundingClientRect();
-      const x = event.clientX - left;
-      const y = event.clientY - top;
-      this.update(x, y);
+    data () {
+      return {
+        currentMax: 0,
+        baseW: 80,
+        heightFactor: 0,
+        lean: 0
+      };
     },
 
-    update: throttleWithRAF(function (x, y) {
-      const { innerWidth, innerHeight } = this.get();
-      const scaleFactor = scaleLinear()
-        .domain([innerHeight, 0])
-        .range([0, 0.8])
+    oncreate () {
+      const next = () => {
+        let { currentMax } = this.get();
+        console.log(currentMax)
+        if (currentMax < realMax) {
+          currentMax += 1
+          this.set({ currentMax });
+          setTimeout(next, 100)
+        }
+      };
 
-      const scaleLean = scaleLinear()
-        .domain([0, innerWidth / 2, innerWidth])
-        .range([0.5, 0, -0.5])
+      next();
+    },
 
-      this.set({
-        heightFactor: scaleFactor(y),
-        lean: scaleLean(x)
-      });
-    })
+    methods: {
+      onMouseMove (event) {
+        const { left, top } = this.refs.svg.getBoundingClientRect();
+        const x = event.clientX - left;
+        const y = event.clientY - top;
+        this.update(x, y);
+      },
+
+      update: throttleWithRAF(function (x, y) {
+        const { innerWidth, innerHeight } = this.get();
+        const scaleFactor = scaleLinear()
+          .domain([innerHeight, 0])
+          .range([0, 0.8])
+
+        const scaleLean = scaleLinear()
+          .domain([0, innerWidth / 2, innerWidth])
+          .range([0.5, 0, -0.5])
+
+        this.set({
+          heightFactor: scaleFactor(y),
+          lean: scaleLean(x)
+        });
+      })
+    }
   }
-}
 </script>
 
 <style>
