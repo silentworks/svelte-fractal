@@ -5,9 +5,11 @@ import resolve from 'rollup-plugin-node-resolve';
 var pkg = require('./package.json');
 
 export default {
-  entry: 'src/main.js',
-  dest: 'build/bundle-' + pkg.version + '.js',
-  format: 'iife',
+  input: 'src/main.js',
+  output: {
+    file: 'build/bundle-' + pkg.version + '.js',
+    format: 'iife',
+  },
   plugins: [
     resolve({
       // use "module" field for ES6 module if possible
