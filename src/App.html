@@ -1,15 +1,15 @@
-<:Window bind:innerWidth bind:innerHeight/>
+<svelte:window bind:innerWidth bind:innerHeight/>
 
-<svg width="{{innerWidth}}" height="{{innerHeight}}" ref:svg on:mousemove='onMouseMove(event)'>
+<svg width="{innerWidth}" height="{innerHeight}" ref:svg on:mousemove='onMouseMove(event)'>
   <Pythagoras
-    w="{{baseW}}"
-    h="{{baseW}}"
-    :heightFactor
-    :lean
-    x="{{(innerWidth - baseW) / 2}}"
-    y="{{innerHeight - baseW}}"
+    w="{baseW}"
+    h="{baseW}"
+    {heightFactor}
+    {lean}
+    x="{(innerWidth - baseW) / 2}"
+    y="{innerHeight - baseW}"
     lvl="0"
-    maxlvl="{{currentMax}}"
+    maxlvl="{currentMax}"
   />
 </svg>
 
