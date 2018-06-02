@@ -1,6 +1,192 @@
 (function () {
 'use strict';
 
+function noop() {}
+
+function assign(tar, src) {
+	for (var k in src) { tar[k] = src[k]; }
+	return tar;
+}
+
+function appendNode(node, target) {
+	target.appendChild(node);
+}
+
+function insertNode(node, target, anchor) {
+	target.insertBefore(node, anchor);
+}
+
+function detachNode(node) {
+	node.parentNode.removeChild(node);
+}
+
+function createSvgElement(name) {
+	return document.createElementNS('http://www.w3.org/2000/svg', name);
+}
+
+function addListener(node, event, handler) {
+	node.addEventListener(event, handler, false);
+}
+
+function removeListener(node, event, handler) {
+	node.removeEventListener(event, handler, false);
+}
+
+function setAttribute(node, attribute, value) {
+	node.setAttribute(attribute, value);
+}
+
+function setStyle(node, key, value) {
+	node.style.setProperty(key, value);
+}
+
+function destroyBlock(block, lookup) {
+	block.u();
+	block.d();
+	lookup[block.key] = null;
+}
+
+function outroAndDestroyBlock(block, lookup) {
+	block.o(function() {
+		destroyBlock(block, lookup);
+	});
+}
+
+function blankObject() {
+	return Object.create(null);
+}
+
+function destroy(detach) {
+	this.destroy = noop;
+	this.fire('destroy');
+	this.set = this.get = noop;
+
+	if (detach !== false) { this._fragment.u(); }
+	this._fragment.d();
+	this._fragment = this._state = null;
+}
+
+function _differs(a, b) {
+	return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
+}
+
+function fire(eventName, data) {
+	var this$1 = this;
+
+	var handlers =
+		eventName in this._handlers && this._handlers[eventName].slice();
+	if (!handlers) { return; }
+
+	for (var i = 0; i < handlers.length; i += 1) {
+		var handler = handlers[i];
+
+		if (!handler.__calling) {
+			handler.__calling = true;
+			handler.call(this$1, data);
+			handler.__calling = false;
+		}
+	}
+}
+
+function get(key) {
+	return key ? this._state[key] : this._state;
+}
+
+function init(component, options) {
+	component._handlers = blankObject();
+	component._bind = options._bind;
+
+	component.options = options;
+	component.root = options.root || component;
+	component.store = component.root.store || options.store;
+}
+
+function observe(key, callback, options) {
+	var fn = callback.bind(this);
+
+	if (!options || options.init !== false) {
+		fn(this.get()[key], undefined);
+	}
+
+	return this.on(options && options.defer ? 'update' : 'state', function(event) {
+		if (event.changed[key]) { fn(event.current[key], event.previous && event.previous[key]); }
+	});
+}
+
+function on(eventName, handler) {
+	if (eventName === 'teardown') { return this.on('destroy', handler); }
+
+	var handlers = this._handlers[eventName] || (this._handlers[eventName] = []);
+	handlers.push(handler);
+
+	return {
+		cancel: function() {
+			var index = handlers.indexOf(handler);
+			if (~index) { handlers.splice(index, 1); }
+		}
+	};
+}
+
+function set(newState) {
+	this._set(assign({}, newState));
+	if (this.root._lock) { return; }
+	this.root._lock = true;
+	callAll(this.root._beforecreate);
+	callAll(this.root._oncreate);
+	callAll(this.root._aftercreate);
+	this.root._lock = false;
+}
+
+function _set(newState) {
+	var this$1 = this;
+
+	var oldState = this._state,
+		changed = {},
+		dirty = false;
+
+	for (var key in newState) {
+		if (this$1._differs(newState[key], oldState[key])) { changed[key] = dirty = true; }
+	}
+	if (!dirty) { return; }
+
+	this._state = assign(assign({}, oldState), newState);
+	this._recompute(changed, this._state);
+	if (this._bind) { this._bind(changed, this._state); }
+
+	if (this._fragment) {
+		this.fire("state", { changed: changed, current: this._state, previous: oldState });
+		this._fragment.p(changed, this._state);
+		this.fire("update", { changed: changed, current: this._state, previous: oldState });
+	}
+}
+
+function callAll(fns) {
+	while (fns && fns.length) { fns.shift()(); }
+}
+
+function _mount(target, anchor) {
+	this._fragment[this._fragment.i ? 'i' : 'm'](target, anchor || null);
+}
+
+function _unmount() {
+	if (this._fragment) { this._fragment.u(); }
+}
+
+var proto = {
+	destroy: destroy,
+	get: get,
+	fire: fire,
+	observe: observe,
+	on: on,
+	set: set,
+	teardown: destroy,
+	_recompute: noop,
+	_set: _set,
+	_mount: _mount,
+	_unmount: _unmount,
+	_differs: _differs
+};
+
 var ascending = function(a, b) {
   return a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 };
@@ -301,25 +487,25 @@ function map$1(object, f) {
 
 function Set() {}
 
-var proto = map$1.prototype;
+var proto$1 = map$1.prototype;
 
-Set.prototype = set.prototype = {
+Set.prototype = set$1.prototype = {
   constructor: Set,
-  has: proto.has,
+  has: proto$1.has,
   add: function(value) {
     value += "";
     this[prefix + value] = value;
     return this;
   },
-  remove: proto.remove,
-  clear: proto.clear,
-  values: proto.keys,
-  size: proto.size,
-  empty: proto.empty,
-  each: proto.each
+  remove: proto$1.remove,
+  clear: proto$1.clear,
+  values: proto$1.keys,
+  size: proto$1.size,
+  empty: proto$1.empty,
+  each: proto$1.each
 };
 
-function set(object, f) {
+function set$1(object, f) {
   var set = new Set;
 
   // Copy constructor.
@@ -862,7 +1048,7 @@ var constant$1 = function(x) {
   };
 };
 
-function linear$1(a, d) {
+function linear$2(a, d) {
   return function(t) {
     return a + t * d;
   };
@@ -876,7 +1062,7 @@ function exponential(a, b, y) {
 
 function hue(a, b) {
   var d = b - a;
-  return d ? linear$1(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$1(isNaN(a) ? b : a);
+  return d ? linear$2(a, d > 180 || d < -180 ? d - 360 * Math.round(d / 360) : d) : constant$1(isNaN(a) ? b : a);
 }
 
 function gamma(y) {
@@ -887,7 +1073,7 @@ function gamma(y) {
 
 function nogamma(a, b) {
   var d = b - a;
-  return d ? linear$1(a, d) : constant$1(isNaN(a) ? b : a);
+  return d ? linear$2(a, d) : constant$1(isNaN(a) ? b : a);
 }
 
 var rgb$1 = (function rgbGamma(y) {
@@ -1587,11 +1773,11 @@ function linearish(scale) {
   return scale;
 }
 
-function linear() {
+function linear$1() {
   var scale = continuous(deinterpolateLinear, reinterpolate);
 
   scale.copy = function() {
-    return copy(scale, linear());
+    return copy(scale, linear$1());
   };
 
   return linearish(scale);
@@ -2502,411 +2688,217 @@ function ramp(range) {
 
 var interpolateViridis = ramp(colors("44015444025645045745055946075a46085c460a5d460b5e470d60470e6147106347116447136548146748166848176948186a481a6c481b6d481c6e481d6f481f70482071482173482374482475482576482677482878482979472a7a472c7a472d7b472e7c472f7d46307e46327e46337f463480453581453781453882443983443a83443b84433d84433e85423f854240864241864142874144874045884046883f47883f48893e49893e4a893e4c8a3d4d8a3d4e8a3c4f8a3c508b3b518b3b528b3a538b3a548c39558c39568c38588c38598c375a8c375b8d365c8d365d8d355e8d355f8d34608d34618d33628d33638d32648e32658e31668e31678e31688e30698e306a8e2f6b8e2f6c8e2e6d8e2e6e8e2e6f8e2d708e2d718e2c718e2c728e2c738e2b748e2b758e2a768e2a778e2a788e29798e297a8e297b8e287c8e287d8e277e8e277f8e27808e26818e26828e26828e25838e25848e25858e24868e24878e23888e23898e238a8d228b8d228c8d228d8d218e8d218f8d21908d21918c20928c20928c20938c1f948c1f958b1f968b1f978b1f988b1f998a1f9a8a1e9b8a1e9c891e9d891f9e891f9f881fa0881fa1881fa1871fa28720a38620a48621a58521a68522a78522a88423a98324aa8325ab8225ac8226ad8127ad8128ae8029af7f2ab07f2cb17e2db27d2eb37c2fb47c31b57b32b67a34b67935b77937b87838b9773aba763bbb753dbc743fbc7340bd7242be7144bf7046c06f48c16e4ac16d4cc26c4ec36b50c46a52c56954c56856c66758c7655ac8645cc8635ec96260ca6063cb5f65cb5e67cc5c69cd5b6ccd5a6ece5870cf5773d05675d05477d1537ad1517cd2507fd34e81d34d84d44b86d54989d5488bd6468ed64590d74393d74195d84098d83e9bd93c9dd93ba0da39a2da37a5db36a8db34aadc32addc30b0dd2fb2dd2db5de2bb8de29bade28bddf26c0df25c2df23c5e021c8e020cae11fcde11dd0e11cd2e21bd5e21ad8e219dae319dde318dfe318e2e418e5e419e7e419eae51aece51befe51cf1e51df4e61ef6e620f8e621fbe723fde725"));
 
-function noop() {}
-
-function assign(target) {
-	var arguments$1 = arguments;
-
-	var k,
-		source,
-		i = 1,
-		len = arguments.length;
-	for (; i < len; i++) {
-		source = arguments$1[i];
-		for (k in source) { target[k] = source[k]; }
-	}
-
-	return target;
-}
-
-function appendNode(node, target) {
-	target.appendChild(node);
-}
-
-function insertNode(node, target, anchor) {
-	target.insertBefore(node, anchor);
-}
-
-function detachNode(node) {
-	node.parentNode.removeChild(node);
-}
-
-function createSvgElement(name) {
-	return document.createElementNS('http://www.w3.org/2000/svg', name);
-}
-
-function createText(data) {
-	return document.createTextNode(data);
-}
-
-function addListener(node, event, handler) {
-	node.addEventListener(event, handler, false);
-}
-
-function removeListener(node, event, handler) {
-	node.removeEventListener(event, handler, false);
-}
-
-function setAttribute(node, attribute, value) {
-	node.setAttribute(attribute, value);
-}
-
-function destroy(detach) {
-	this.destroy = this.set = noop;
-	this.fire('destroy');
-
-	if (detach !== false) { this._fragment.unmount(); }
-	this._fragment.destroy();
-	this._fragment = null;
-
-	this._state = {};
-}
-
-function differs(a, b) {
-	return a !== b || ((a && typeof a === 'object') || typeof a === 'function');
-}
-
-function dispatchObservers(component, group, newState, oldState) {
-	for (var key in group) {
-		if (!(key in newState)) { continue; }
-
-		var newValue = newState[key];
-		var oldValue = oldState[key];
-
-		if (differs(newValue, oldValue)) {
-			var callbacks = group[key];
-			if (!callbacks) { continue; }
-
-			for (var i = 0; i < callbacks.length; i += 1) {
-				var callback = callbacks[i];
-				if (callback.__calling) { continue; }
-
-				callback.__calling = true;
-				callback.call(component, newValue, oldValue);
-				callback.__calling = false;
-			}
-		}
-	}
-}
-
-function get(key) {
-	return key ? this._state[key] : this._state;
-}
-
-function fire(eventName, data) {
-	var this$1 = this;
-
-	var handlers =
-		eventName in this._handlers && this._handlers[eventName].slice();
-	if (!handlers) { return; }
-
-	for (var i = 0; i < handlers.length; i += 1) {
-		handlers[i].call(this$1, data);
-	}
-}
-
-function observe(key, callback, options) {
-	var group = options && options.defer
-		? this._observers.post
-		: this._observers.pre;
-
-	(group[key] || (group[key] = [])).push(callback);
-
-	if (!options || options.init !== false) {
-		callback.__calling = true;
-		callback.call(this, this._state[key]);
-		callback.__calling = false;
-	}
-
-	return {
-		cancel: function() {
-			var index = group[key].indexOf(callback);
-			if (~index) { group[key].splice(index, 1); }
-		}
-	};
-}
-
-function on(eventName, handler) {
-	if (eventName === 'teardown') { return this.on('destroy', handler); }
-
-	var handlers = this._handlers[eventName] || (this._handlers[eventName] = []);
-	handlers.push(handler);
-
-	return {
-		cancel: function() {
-			var index = handlers.indexOf(handler);
-			if (~index) { handlers.splice(index, 1); }
-		}
-	};
-}
-
-function set$2(newState) {
-	this._set(assign({}, newState));
-	if (this._root._lock) { return; }
-	this._root._lock = true;
-	callAll(this._root._beforecreate);
-	callAll(this._root._oncreate);
-	callAll(this._root._aftercreate);
-	this._root._lock = false;
-}
-
-function callAll(fns) {
-	while (fns && fns.length) { fns.pop()(); }
-}
-
-var proto$1 = {
-	destroy: destroy,
-	get: get,
-	fire: fire,
-	observe: observe,
-	on: on,
-	set: set$2,
-	teardown: destroy
-};
-
-function recompute ( state, newState, oldState, isInitial ) {
-	if ( isInitial || ( 'heightFactor' in newState && differs( state.heightFactor, oldState.heightFactor ) ) || ( 'w' in newState && differs( state.w, oldState.w ) ) ) {
-		state.trigH = newState.trigH = template$1.computed.trigH( state.heightFactor, state.w );
-	}
-
-	if ( isInitial || ( 'w' in newState && differs( state.w, oldState.w ) ) || ( 'trigH' in newState && differs( state.trigH, oldState.trigH ) ) || ( 'lean' in newState && differs( state.lean, oldState.lean ) ) ) {
-		state.A = newState.A = template$1.computed.A( state.w, state.trigH, state.lean );
-		state.B = newState.B = template$1.computed.B( state.w, state.trigH, state.lean );
-	}
-
-	if ( isInitial || ( 'left' in newState && differs( state.left, oldState.left ) ) || ( 'right' in newState && differs( state.right, oldState.right ) ) || ( 'A' in newState && differs( state.A, oldState.A ) ) || ( 'B' in newState && differs( state.B, oldState.B ) ) || ( 'w' in newState && differs( state.w, oldState.w ) ) ) {
-		state.rotate = newState.rotate = template$1.computed.rotate( state.left, state.right, state.A, state.B, state.w );
-	}
-
-	if ( isInitial || ( 'w' in newState && differs( state.w, oldState.w ) ) || ( 'trigH' in newState && differs( state.trigH, oldState.trigH ) ) || ( 'lean' in newState && differs( state.lean, oldState.lean ) ) ) {
-		state.nextLeft = newState.nextLeft = template$1.computed.nextLeft( state.w, state.trigH, state.lean );
-		state.nextRight = newState.nextRight = template$1.computed.nextRight( state.w, state.trigH, state.lean );
-	}
-
-	if ( isInitial || ( 'lvl' in newState && differs( state.lvl, oldState.lvl ) ) || ( 'maxlvl' in newState && differs( state.maxlvl, oldState.maxlvl ) ) ) {
-		state.fill = newState.fill = template$1.computed.fill( state.lvl, state.maxlvl );
-	}
-}
-
-var template$1 = (function () {
+/* src/Pythagoras.html generated by Svelte v1.64.1 */
 function deg (radians) {
   return radians * (180 / Math.PI);
 }
 
-return {
-  data: function data() {
-    return {
-      heightFactor: 0,
-      lean: 0,
-      left: 0,
-      lvl: 0,
-      maxlvl: 0,
-      right: 0,
-      w: 0
-    }
-  },
+function trigH(heightFactor, w) {
+	return heightFactor * w;
+}
 
-  computed: {
-    trigH: function (heightFactor, w) { return heightFactor * w; },
-    rotate: function (left, right, A, B, w) {
-      if (left) {
-        return ("rotate(" + (-A) + " 0 " + w + ")")
-      } else if (right) {
-        return ("rotate(" + B + " " + w + " " + w + ")")
-      } else {
-        return 'rotate(0)'
-      }
-    },
+function A$1(w, trigH, lean) {
+	return deg(Math.atan(trigH / ((0.5 - lean) * w)));
+}
 
-    nextLeft: function (w, trigH, lean) { return Math.sqrt(Math.pow( trigH, 2 ) + Math.pow( (w * (0.5 - lean)), 2 )); },
-    nextRight: function (w, trigH, lean) { return Math.sqrt(Math.pow( trigH, 2 ) + Math.pow( (w * (0.5 + lean)), 2 )); },
-    A: function (w, trigH, lean) { return deg(Math.atan(trigH / ((0.5 - lean) * w))); },
-    B: function (w, trigH, lean) { return deg(Math.atan(trigH / ((0.5 + lean) * w))); },
-    fill: function (lvl, maxlvl) { return interpolateViridis(lvl / maxlvl); }
-  },
+function B$1(w, trigH, lean) {
+	return deg(Math.atan(trigH / ((0.5 + lean) * w)));
+}
 
-  helpers: {
-    interpolateViridis: interpolateViridis
+function rotate(left, right, A, B, w) {
+  if (left) {
+    return ("rotate(" + (-A) + " 0 " + w + ")")
+  } else if (right) {
+    return ("rotate(" + B + " " + w + " " + w + ")")
+  } else {
+    return 'rotate(0)'
   }
 }
-}());
 
-function create_main_fragment$1 ( state, component ) {
-	var g, g_transform_value, rect, rect_width_value, rect_height_value, rect_style_value;
+function nextLeft(w, trigH, lean) {
+	return Math.sqrt(Math.pow( trigH, 2 ) + Math.pow( (w * (0.5 - lean)), 2 ));
+}
 
-	var if_block = (1 < state.w && state.lvl < state.maxlvl) && create_if_block( state, component );
+function nextRight(w, trigH, lean) {
+	return Math.sqrt(Math.pow( trigH, 2 ) + Math.pow( (w * (0.5 + lean)), 2 ));
+}
+
+function fill(lvl, maxlvl) {
+	return interpolateViridis(lvl / maxlvl);
+}
+
+function data$1() {
+  return {
+    heightFactor: 0,
+    lean: 0,
+    left: 0,
+    lvl: 0,
+    maxlvl: 0,
+    right: 0,
+    w: 0
+  }
+}
+
+function create_main_fragment$1(component, state) {
+	var g, rect, g_transform_value;
+
+	var if_block = (1 < state.w && state.lvl < state.maxlvl) && create_if_block(component, state);
 
 	return {
-		create: function () {
-			g = createSvgElement( 'g' );
-			rect = createSvgElement( 'rect' );
-			if ( if_block ) { if_block.create(); }
-			this.hydrate();
+		c: function create() {
+			g = createSvgElement("g");
+			rect = createSvgElement("rect");
+			if (if_block) { if_block.c(); }
+			this.h();
 		},
 
-		hydrate: function ( nodes ) {
-			setAttribute( g, 'transform', g_transform_value = "translate(" + ( state.x ) + " " + ( state.y ) + ") " + ( state.rotate ) );
-			setAttribute( rect, 'width', rect_width_value = state.w );
-			setAttribute( rect, 'height', rect_height_value = state.w );
-			setAttribute( rect, 'style', rect_style_value = "fill:" + ( state.fill ) );
+		h: function hydrate() {
+			setAttribute(rect, "width", state.w);
+			setAttribute(rect, "height", state.w);
+			setStyle(rect, "fill", state.fill);
+			setAttribute(g, "transform", g_transform_value = "translate(" + state.x + " " + state.y + ") " + state.rotate);
 		},
 
-		mount: function ( target, anchor ) {
-			insertNode( g, target, anchor );
-			appendNode( rect, g );
-			if ( if_block ) { if_block.mount( g, null ); }
+		m: function mount(target, anchor) {
+			insertNode(g, target, anchor);
+			appendNode(rect, g);
+			if (if_block) { if_block.m(g, null); }
 		},
 
-		update: function ( changed, state ) {
-			if ( g_transform_value !== ( g_transform_value = "translate(" + ( state.x ) + " " + ( state.y ) + ") " + ( state.rotate ) ) ) {
-				setAttribute( g, 'transform', g_transform_value );
+		p: function update(changed, state) {
+			if (changed.w) {
+				setAttribute(rect, "width", state.w);
+				setAttribute(rect, "height", state.w);
 			}
 
-			if ( rect_width_value !== ( rect_width_value = state.w ) ) {
-				setAttribute( rect, 'width', rect_width_value );
+			if (changed.fill) {
+				setStyle(rect, "fill", state.fill);
 			}
 
-			if ( rect_height_value !== ( rect_height_value = state.w ) ) {
-				setAttribute( rect, 'height', rect_height_value );
-			}
-
-			if ( rect_style_value !== ( rect_style_value = "fill:" + ( state.fill ) ) ) {
-				setAttribute( rect, 'style', rect_style_value );
-			}
-
-			if ( 1 < state.w && state.lvl < state.maxlvl ) {
-				if ( if_block ) {
-					if_block.update( changed, state );
+			if (1 < state.w && state.lvl < state.maxlvl) {
+				if (if_block) {
+					if_block.p(changed, state);
 				} else {
-					if_block = create_if_block( state, component );
-					if_block.create();
-					if_block.mount( g, null );
+					if_block = create_if_block(component, state);
+					if_block.c();
+					if_block.m(g, null);
 				}
-			} else if ( if_block ) {
-				if_block.unmount();
-				if_block.destroy();
+			} else if (if_block) {
+				if_block.u();
+				if_block.d();
 				if_block = null;
 			}
+
+			if ((changed.x || changed.y || changed.rotate) && g_transform_value !== (g_transform_value = "translate(" + state.x + " " + state.y + ") " + state.rotate)) {
+				setAttribute(g, "transform", g_transform_value);
+			}
 		},
 
-		unmount: function () {
-			detachNode( g );
-			if ( if_block ) { if_block.unmount(); }
+		u: function unmount() {
+			detachNode(g);
+			if (if_block) { if_block.u(); }
 		},
 
-		destroy: function () {
-			if ( if_block ) { if_block.destroy(); }
+		d: function destroy$$1() {
+			if (if_block) { if_block.d(); }
 		}
 	};
 }
 
-function create_if_block ( state, component ) {
+// (3:2) {{#if 1 < w && lvl < maxlvl}}
+function create_if_block(component, state) {
 
+	var pythagoras_initial_data = {
+	 	maxlvl: state.maxlvl,
+	 	heightFactor: state.heightFactor,
+	 	lean: state.lean,
+	 	left: true,
+	 	x: 0,
+	 	y: -state.nextLeft,
+	 	w: state.nextLeft,
+	 	lvl: state.lvl + 1
+	 };
 	var pythagoras = new Pythagoras({
-		_root: component._root,
-		data: {
-			left: true,
-			x: 0,
-			maxlvl: state.maxlvl,
-			heightFactor: state.heightFactor,
-			lean: state.lean,
-			y: -state.nextLeft,
-			w: state.nextLeft,
-			lvl: state.lvl + 1
-		}
+		root: component.root,
+		data: pythagoras_initial_data
 	});
 
+	var pythagoras_1_initial_data = {
+	 	maxlvl: state.maxlvl,
+	 	heightFactor: state.heightFactor,
+	 	lean: state.lean,
+	 	right: true,
+	 	x: state.w - state.nextRight,
+	 	y: -state.nextRight,
+	 	w: state.nextRight,
+	 	lvl: state.lvl + 1
+	 };
 	var pythagoras_1 = new Pythagoras({
-		_root: component._root,
-		data: {
-			right: true,
-			maxlvl: state.maxlvl,
-			heightFactor: state.heightFactor,
-			lean: state.lean,
-			x: state.w - state.nextRight,
-			y: -state.nextRight,
-			w: state.nextRight,
-			lvl: state.lvl + 1
-		}
+		root: component.root,
+		data: pythagoras_1_initial_data
 	});
 
 	return {
-		create: function () {
-			pythagoras._fragment.create();
-			pythagoras_1._fragment.create();
+		c: function create() {
+			pythagoras._fragment.c();
+			pythagoras_1._fragment.c();
 		},
 
-		mount: function ( target, anchor ) {
-			pythagoras._fragment.mount( target, anchor );
-			pythagoras_1._fragment.mount( target, anchor );
+		m: function mount(target, anchor) {
+			pythagoras._mount(target, anchor);
+			pythagoras_1._mount(target, anchor);
 		},
 
-		update: function ( changed, state ) {
+		p: function update(changed, state) {
 			var pythagoras_changes = {};
-
-			if ( 'maxlvl' in changed ) { pythagoras_changes.maxlvl = state.maxlvl; }
-			if ( 'heightFactor' in changed ) { pythagoras_changes.heightFactor = state.heightFactor; }
-			if ( 'lean' in changed ) { pythagoras_changes.lean = state.lean; }
-			if ( 'nextLeft' in changed ) { pythagoras_changes.y = -state.nextLeft; }
-			if ( 'nextLeft' in changed ) { pythagoras_changes.w = state.nextLeft; }
-			if ( 'lvl' in changed ) { pythagoras_changes.lvl = state.lvl + 1; }
-
-			if ( Object.keys( pythagoras_changes ).length ) { pythagoras._set( pythagoras_changes ); }
+			if (changed.maxlvl) { pythagoras_changes.maxlvl = state.maxlvl; }
+			if (changed.heightFactor) { pythagoras_changes.heightFactor = state.heightFactor; }
+			if (changed.lean) { pythagoras_changes.lean = state.lean; }
+			if (changed.nextLeft) { pythagoras_changes.y = -state.nextLeft; }
+			if (changed.nextLeft) { pythagoras_changes.w = state.nextLeft; }
+			if (changed.lvl) { pythagoras_changes.lvl = state.lvl + 1; }
+			pythagoras._set(pythagoras_changes);
 
 			var pythagoras_1_changes = {};
-
-			if ( 'maxlvl' in changed ) { pythagoras_1_changes.maxlvl = state.maxlvl; }
-			if ( 'heightFactor' in changed ) { pythagoras_1_changes.heightFactor = state.heightFactor; }
-			if ( 'lean' in changed ) { pythagoras_1_changes.lean = state.lean; }
-			if ( 'w' in changed||'nextRight' in changed ) { pythagoras_1_changes.x = state.w - state.nextRight; }
-			if ( 'nextRight' in changed ) { pythagoras_1_changes.y = -state.nextRight; }
-			if ( 'nextRight' in changed ) { pythagoras_1_changes.w = state.nextRight; }
-			if ( 'lvl' in changed ) { pythagoras_1_changes.lvl = state.lvl + 1; }
-
-			if ( Object.keys( pythagoras_1_changes ).length ) { pythagoras_1._set( pythagoras_1_changes ); }
+			if (changed.maxlvl) { pythagoras_1_changes.maxlvl = state.maxlvl; }
+			if (changed.heightFactor) { pythagoras_1_changes.heightFactor = state.heightFactor; }
+			if (changed.lean) { pythagoras_1_changes.lean = state.lean; }
+			if (changed.w || changed.nextRight) { pythagoras_1_changes.x = state.w - state.nextRight; }
+			if (changed.nextRight) { pythagoras_1_changes.y = -state.nextRight; }
+			if (changed.nextRight) { pythagoras_1_changes.w = state.nextRight; }
+			if (changed.lvl) { pythagoras_1_changes.lvl = state.lvl + 1; }
+			pythagoras_1._set(pythagoras_1_changes);
 		},
 
-		unmount: function () {
-			pythagoras._fragment.unmount();
-			pythagoras_1._fragment.unmount();
+		u: function unmount() {
+			pythagoras._unmount();
+			pythagoras_1._unmount();
 		},
 
-		destroy: function () {
-			pythagoras.destroy( false );
-			pythagoras_1.destroy( false );
+		d: function destroy$$1() {
+			pythagoras.destroy(false);
+			pythagoras_1.destroy(false);
 		}
 	};
 }
 
-function Pythagoras ( options ) {
-	options = options || {};
-	this._state = assign( template$1.data(), options.data );
-	recompute( this._state, this._state, {}, true );
+function Pythagoras(options) {
+	init(this, options);
+	this._state = assign(data$1(), options.data);
+	this._recompute({ heightFactor: 1, w: 1, trigH: 1, lean: 1, left: 1, right: 1, A: 1, B: 1, lvl: 1, maxlvl: 1 }, this._state);
 
-	this._observers = {
-		pre: Object.create( null ),
-		post: Object.create( null )
-	};
-
-	this._handlers = Object.create( null );
-
-	this._root = options._root || this;
-	this._yield = options._yield;
-
-	if ( !options._root ) {
+	if (!options.root) {
 		this._oncreate = [];
 		this._beforecreate = [];
 		this._aftercreate = [];
 	}
 
-	this._fragment = create_main_fragment$1( this._state, this );
+	this._fragment = create_main_fragment$1(this, this._state);
 
-	if ( options.target ) {
-		this._fragment.create();
-		this._fragment.mount( options.target, null );
-	}
+	if (options.target) {
+		this._fragment.c();
+		this._mount(options.target, options.anchor);
 
-	if ( !options._root ) {
 		this._lock = true;
 		callAll(this._beforecreate);
 		callAll(this._oncreate);
@@ -2915,18 +2907,33 @@ function Pythagoras ( options ) {
 	}
 }
 
-assign( Pythagoras.prototype, proto$1 );
+assign(Pythagoras.prototype, proto);
 
-Pythagoras.prototype._set = function _set ( newState ) {
-	var oldState = this._state;
-	this._state = assign( {}, oldState, newState );
-	recompute( this._state, newState, oldState, false );
-	dispatchObservers( this, this._observers.pre, newState, oldState );
-	this._fragment.update( newState, this._state );
-	dispatchObservers( this, this._observers.post, newState, oldState );
+Pythagoras.prototype._recompute = function _recompute(changed, state) {
+	if (changed.heightFactor || changed.w) {
+		if (this._differs(state.trigH, (state.trigH = trigH(state.heightFactor, state.w)))) { changed.trigH = true; }
+	}
+
+	if (changed.w || changed.trigH || changed.lean) {
+		if (this._differs(state.A, (state.A = A$1(state.w, state.trigH, state.lean)))) { changed.A = true; }
+		if (this._differs(state.B, (state.B = B$1(state.w, state.trigH, state.lean)))) { changed.B = true; }
+	}
+
+	if (changed.left || changed.right || changed.A || changed.B || changed.w) {
+		if (this._differs(state.rotate, (state.rotate = rotate(state.left, state.right, state.A, state.B, state.w)))) { changed.rotate = true; }
+	}
+
+	if (changed.w || changed.trigH || changed.lean) {
+		if (this._differs(state.nextLeft, (state.nextLeft = nextLeft(state.w, state.trigH, state.lean)))) { changed.nextLeft = true; }
+		if (this._differs(state.nextRight, (state.nextRight = nextRight(state.w, state.trigH, state.lean)))) { changed.nextRight = true; }
+	}
+
+	if (changed.lvl || changed.maxlvl) {
+		if (this._differs(state.fill, (state.fill = fill(state.lvl, state.maxlvl)))) { changed.fill = true; }
+	}
 };
 
-var template = (function () {
+/* src/App.html generated by Svelte v1.64.1 */
 function throttleWithRAF (fn) {
   var running = false;
   return function () {
@@ -2944,184 +2951,170 @@ function throttleWithRAF (fn) {
 
 var realMax = 11;
 
-return {
-  data: function data () {
-    return {
-      currentMax: 0,
-      baseW: 80,
-      heightFactor: 0,
-      lean: 0
-    };
-  },
-
-  oncreate: function oncreate () {
-    var this$1 = this;
-
-    var next = function () {
-      var currentMax = this$1.get('currentMax');
-      if (currentMax < realMax) {
-        currentMax += 1;
-        this$1.set({currentMax: currentMax});
-        setTimeout(next, 100);
-      }
-    };
-
-    next();
-  },
-
-  methods: {
-    onMouseMove: function onMouseMove (event) {
-      var ref = this.refs.svg.getBoundingClientRect();
-      var left = ref.left;
-      var top = ref.top;
-      var x = event.clientX - left;
-      var y = event.clientY - top;
-      this.update(x, y);
-    },
-
-    update: throttleWithRAF(function (x, y) {
-      var ref = this.get();
-      var innerWidth = ref.innerWidth;
-      var innerHeight = ref.innerHeight;
-      var scaleFactor = linear()
-        .domain([innerHeight, 0])
-        .range([0, 0.8]);
-
-      var scaleLean = linear()
-        .domain([0, innerWidth / 2, innerWidth])
-        .range([0.5, 0, -0.5]);
-
-      this.set({
-        heightFactor: scaleFactor(y),
-        lean: scaleLean(x)
-      });
-    })
-  }
+function data() {
+  return {
+    currentMax: 0,
+    baseW: 80,
+    heightFactor: 0,
+    lean: 0
+  };
 }
-}());
 
-function create_main_fragment ( state, component ) {
-	var text, svg, svg_width_value, svg_height_value;
+var methods = {
+  onMouseMove: function onMouseMove (event) {
+    var ref = this.refs.svg.getBoundingClientRect();
+    var left = ref.left;
+    var top = ref.top;
+    var x = event.clientX - left;
+    var y = event.clientY - top;
+    this.update(x, y);
+  },
 
-	function onwindowresize ( event ) {
+  update: throttleWithRAF(function (x, y) {
+    var ref = this.get();
+    var innerWidth = ref.innerWidth;
+    var innerHeight = ref.innerHeight;
+    var scaleFactor = linear$1()
+      .domain([innerHeight, 0])
+      .range([0, 0.8]);
+
+    var scaleLean = linear$1()
+      .domain([0, innerWidth / 2, innerWidth])
+      .range([0.5, 0, -0.5]);
+
+    this.set({
+      heightFactor: scaleFactor(y),
+      lean: scaleLean(x)
+    });
+  })
+};
+
+function oncreate() {
+  var this$1 = this;
+
+  var next = function () {
+    var currentMax = this$1.get('currentMax');
+    if (currentMax < realMax) {
+      currentMax += 1;
+      this$1.set({currentMax: currentMax});
+      setTimeout(next, 100);
+    }
+  };
+
+  next();
+}
+
+function create_main_fragment(component, state) {
+	var svg;
+
+	function onwindowresize(event) {
 		component.set({
 			innerWidth: this.innerWidth,
 			innerHeight: this.innerHeight
 		});
 	}
-	window.addEventListener( 'resize', onwindowresize );
+	window.addEventListener("resize", onwindowresize);
 
-	function mousemove_handler ( event ) {
+	var pythagoras_initial_data = {
+	 	w: state.baseW,
+	 	h: state.baseW,
+	 	heightFactor: state.heightFactor,
+	 	lean: state.lean,
+	 	x: (state.innerWidth - state.baseW) / 2,
+	 	y: state.innerHeight - state.baseW,
+	 	lvl: 0,
+	 	maxlvl: state.currentMax
+	 };
+	var pythagoras = new Pythagoras({
+		root: component.root,
+		data: pythagoras_initial_data
+	});
+
+	function mousemove_handler(event) {
 		component.onMouseMove(event);
 	}
 
-	var pythagoras = new Pythagoras({
-		_root: component._root,
-		data: {
-			lvl: 0,
-			w: state.baseW,
-			h: state.baseW,
-			heightFactor: state.heightFactor,
-			lean: state.lean,
-			x: (state.innerWidth - state.baseW) / 2,
-			y: state.innerHeight - state.baseW,
-			maxlvl: state.currentMax
-		}
-	});
-
 	return {
-		create: function () {
-			text = createText( "\n\n" );
-			svg = createSvgElement( 'svg' );
-			pythagoras._fragment.create();
-			this.hydrate();
+		c: function create() {
+			svg = createSvgElement("svg");
+			pythagoras._fragment.c();
+			this.h();
 		},
 
-		hydrate: function ( nodes ) {
-			setAttribute( svg, 'width', svg_width_value = state.innerWidth );
-			setAttribute( svg, 'height', svg_height_value = state.innerHeight );
-			addListener( svg, 'mousemove', mousemove_handler );
+		h: function hydrate() {
+			addListener(svg, "mousemove", mousemove_handler);
+			setAttribute(svg, "width", state.innerWidth);
+			setAttribute(svg, "height", state.innerHeight);
 		},
 
-		mount: function ( target, anchor ) {
-			insertNode( text, target, anchor );
-			insertNode( svg, target, anchor );
+		m: function mount(target, anchor) {
+			insertNode(svg, target, anchor);
+			pythagoras._mount(svg, null);
 			component.refs.svg = svg;
-			pythagoras._fragment.mount( svg, null );
 		},
 
-		update: function ( changed, state ) {
-			if ( svg_width_value !== ( svg_width_value = state.innerWidth ) ) {
-				setAttribute( svg, 'width', svg_width_value );
-			}
-
-			if ( svg_height_value !== ( svg_height_value = state.innerHeight ) ) {
-				setAttribute( svg, 'height', svg_height_value );
-			}
-
+		p: function update(changed, state) {
 			var pythagoras_changes = {};
+			if (changed.baseW) { pythagoras_changes.w = state.baseW; }
+			if (changed.baseW) { pythagoras_changes.h = state.baseW; }
+			if (changed.heightFactor) { pythagoras_changes.heightFactor = state.heightFactor; }
+			if (changed.lean) { pythagoras_changes.lean = state.lean; }
+			if (changed.innerWidth || changed.baseW) { pythagoras_changes.x = (state.innerWidth - state.baseW) / 2; }
+			if (changed.innerHeight || changed.baseW) { pythagoras_changes.y = state.innerHeight - state.baseW; }
+			if (changed.currentMax) { pythagoras_changes.maxlvl = state.currentMax; }
+			pythagoras._set(pythagoras_changes);
 
-			if ( 'baseW' in changed ) { pythagoras_changes.w = state.baseW; }
-			if ( 'baseW' in changed ) { pythagoras_changes.h = state.baseW; }
-			if ( 'heightFactor' in changed ) { pythagoras_changes.heightFactor = state.heightFactor; }
-			if ( 'lean' in changed ) { pythagoras_changes.lean = state.lean; }
-			if ( 'innerWidth' in changed||'baseW' in changed ) { pythagoras_changes.x = (state.innerWidth - state.baseW) / 2; }
-			if ( 'innerHeight' in changed||'baseW' in changed ) { pythagoras_changes.y = state.innerHeight - state.baseW; }
-			if ( 'currentMax' in changed ) { pythagoras_changes.maxlvl = state.currentMax; }
+			if (changed.innerWidth) {
+				setAttribute(svg, "width", state.innerWidth);
+			}
 
-			if ( Object.keys( pythagoras_changes ).length ) { pythagoras._set( pythagoras_changes ); }
+			if (changed.innerHeight) {
+				setAttribute(svg, "height", state.innerHeight);
+			}
 		},
 
-		unmount: function () {
-			detachNode( text );
-			detachNode( svg );
+		u: function unmount() {
+			detachNode(svg);
 		},
 
-		destroy: function () {
-			window.removeEventListener( 'resize', onwindowresize );
+		d: function destroy$$1() {
+			window.removeEventListener("resize", onwindowresize);
 
-			removeListener( svg, 'mousemove', mousemove_handler );
-			if ( component.refs.svg === svg ) { component.refs.svg = null; }
-			pythagoras.destroy( false );
+			pythagoras.destroy(false);
+			removeListener(svg, "mousemove", mousemove_handler);
+			if (component.refs.svg === svg) { component.refs.svg = null; }
 		}
 	};
 }
 
-function App ( options ) {
-	options = options || {};
+function App(options) {
+	init(this, options);
 	this.refs = {};
-	this._state = assign( template.data(), options.data );
+	this._state = assign(data(), options.data);
 	this._state.innerWidth = window.innerWidth;
 	this._state.innerHeight = window.innerHeight;
 
-	this._observers = {
-		pre: Object.create( null ),
-		post: Object.create( null )
+	var self = this;
+	var _oncreate = function() {
+		var changed = { innerWidth: 1, innerHeight: 1, baseW: 1, heightFactor: 1, lean: 1, currentMax: 1 };
+		oncreate.call(self);
+		self.fire("update", { changed: changed, current: self._state });
 	};
 
-	this._handlers = Object.create( null );
-
-	this._root = options._root || this;
-	this._yield = options._yield;
-
-	var oncreate = template.oncreate.bind( this );
-
-	if ( !options._root ) {
-		this._oncreate = [oncreate];
+	if (!options.root) {
+		this._oncreate = [];
 		this._beforecreate = [];
 		this._aftercreate = [];
-	} else {
-	 	this._root._oncreate.push(oncreate);
-	 }
-
-	this._fragment = create_main_fragment( this._state, this );
-
-	if ( options.target ) {
-		this._fragment.create();
-		this._fragment.mount( options.target, null );
 	}
 
-	if ( !options._root ) {
+	this._fragment = create_main_fragment(this, this._state);
+
+	this.root._oncreate.push(_oncreate);
+
+	if (options.target) {
+		this._fragment.c();
+		this._mount(options.target, options.anchor);
+
 		this._lock = true;
 		callAll(this._beforecreate);
 		callAll(this._oncreate);
@@ -3130,15 +3123,8 @@ function App ( options ) {
 	}
 }
 
-assign( App.prototype, template.methods, proto$1 );
-
-App.prototype._set = function _set ( newState ) {
-	var oldState = this._state;
-	this._state = assign( {}, oldState, newState );
-	dispatchObservers( this, this._observers.pre, newState, oldState );
-	this._fragment.update( newState, this._state );
-	dispatchObservers( this, this._observers.post, newState, oldState );
-};
+assign(App.prototype, proto);
+assign(App.prototype, methods);
 
 /* eslint-disable no-new */
 var app = new App({
